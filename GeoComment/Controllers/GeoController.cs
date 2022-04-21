@@ -5,7 +5,6 @@ using GeoComment.Services;
 namespace GeoComment.Controllers
 {
     [Route("api/geo-comments")]
-    
     [ApiController]
     public class GeoController : ControllerBase
     {
@@ -14,6 +13,13 @@ namespace GeoComment.Controllers
         {
             _geoService = geoService;
         }
-
+        [HttpGet("~/test/reset-db")]
+        [ApiVersion("0.1")]
+        //[Route("reset-db")]
+        public async Task<bool> ResetDatabase()
+        {
+            return await _geoService.ResetDB();
+        }
     }
+    
 }

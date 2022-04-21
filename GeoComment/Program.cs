@@ -1,18 +1,25 @@
 using GeoComment.Data;
+using GeoComment.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Services.AddControllers();
+builder.Services.AddScoped<GeoService>();
 // Add services to the container.
-
+builder.Services.AddDbContext<GeoDbContext>(
+    o => o.UseSqlServer(
+        builder.Configuration.GetConnectionString("default")));
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddApiVersioning(config =>
+{
+    config.AssumeDefaultVersionWhenUnspecified = true;
+    config.DefaultApiVersion = new ApiVersion(0, 1);
+});
 
-builder.Services.AddDbContext<GeoDbContext>(
-    o => o.UseSqlServer(
-        builder.Configuration.GetConnectionString("default")));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

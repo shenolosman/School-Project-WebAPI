@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿
 using GeoComment.Data;
 
 namespace GeoComment.Services
@@ -13,6 +10,13 @@ namespace GeoComment.Services
         public GeoService(GeoDbContext dbContex)
         {
             _dbContex = dbContex;
+        }
+
+
+        public async Task<bool> ResetDB()
+        {
+            await _dbContex.Database.EnsureDeletedAsync();
+            return  await _dbContex.Database.EnsureCreatedAsync();
         }
     }
 }
