@@ -1,3 +1,6 @@
+using GeoComment.Data;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -7,6 +10,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddDbContext<GeoDbContext>(
+    o => o.UseSqlServer(
+        builder.Configuration.GetConnectionString("default")));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -21,5 +27,13 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var ctx = scope.ServiceProvider
+        .GetRequiredService<GeoDbContext>();
+
+    ctx.Database.EnsureCreated();
+}
 
 app.Run();
