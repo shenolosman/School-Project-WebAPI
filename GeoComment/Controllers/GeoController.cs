@@ -13,16 +13,15 @@ namespace GeoComment.Controllers
         {
             _geoService = geoService;
         }
-
         [HttpGet]
         [ApiVersion("0.1")]
-        public async Task<ActionResult> CommentsWithin(int minlon, int maxlon, int minlat, int maxlat)
+        public async Task<ActionResult<List<MyDTO>>> CommentsFilter(double? minLon, double? maxLon, double? minLat, double? maxLat)
         {
-            var result = await _geoService.RangeFilter(minlon, maxlon, minlat, maxlat);
-            if (result == null)
-            {
-                return NotFound();
-            }
+            if (minLon == null || maxLon == null || minLat == null || maxLat == null)
+                return StatusCode(400);
+            if (!ModelState.IsValid)
+                return BadRequest();
+            var result = await _geoService.RangeFilter(minLon, maxLon, minLat, maxLat);
             return Ok(result);
         }
         [HttpPost]

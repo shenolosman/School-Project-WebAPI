@@ -42,14 +42,13 @@ namespace GeoComment.Services
             };
             return myNewDto;
         }
-
-        public async Task<List<MyDTO>> RangeFilter(int minlon, int maxlon, int minlat, int maxlat)
+        public async Task<List<MyDTO>> RangeFilter(double? minLon, double? maxLon, double? minLat, double? maxLat)
         {
             var filter = await _dbContex.GeoComments.Where(x =>
-                  x.Longitude >= minlon &&
-                  x.Longitude <= maxlon &&
-                  x.Latitude >= minlat &&
-                  x.Latitude <= maxlat).Select(x => new MyDTO
+                  x.Longitude >= minLon &&
+                  x.Longitude <= maxLon &&
+                  x.Latitude >= minLat &&
+                  x.Latitude <= maxLat).Select(x => new MyDTO
                   {
                       author = x.Author,
                       message = x.Message,
