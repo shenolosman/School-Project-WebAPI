@@ -1,6 +1,6 @@
 ﻿using GeoComment.Models;
-using Microsoft.AspNetCore.Mvc;
 using GeoComment.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GeoComment.Controllers
 {
@@ -12,6 +12,18 @@ namespace GeoComment.Controllers
         public GeoController(GeoService geoService)
         {
             _geoService = geoService;
+        }
+
+        [HttpGet]
+        [ApiVersion("0.1")]
+        public async Task<ActionResult> CommentsWithin(int minlon, int maxlon, int minlat, int maxlat)
+        {
+            var result = await _geoService.RangeFilter(minlon, maxlon, minlat, maxlat);
+            if (result == null)
+            {
+                return NotFound();
+            }
+            return Ok(result);
         }
         [HttpPost]
         [ApiVersion("0.1")]
@@ -25,7 +37,7 @@ namespace GeoComment.Controllers
         public async Task<ActionResult> GetID(int id)
         {
             var respons = await _geoService.GetId(id);
-            if (respons==null)
+            if (respons == null)
                 return NotFound("This value not in the db");
             return Ok(respons);
         }
