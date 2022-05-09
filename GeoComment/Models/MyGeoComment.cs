@@ -9,5 +9,6 @@ namespace GeoComment.Models
         public string Author { get; set; }
         public int Latitude { get; set; }
         public int Longitude { get; set; }
+        public User User { get; set; }
     }
 }
