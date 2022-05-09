@@ -46,5 +46,16 @@ namespace GeoComment.Controllers
         {
             return await _geoService.ResetDB();
         }
+
+
+        [HttpGet("{id}")]
+        [ApiVersion("0.2")]
+        public async Task<ActionResult> GetId(int id)
+        {
+            var respons = await _geoService.GetId(id);
+            if (respons == null)
+                return NotFound("This value not in the db");
+            return Ok(respons);
+        }
     }
 }

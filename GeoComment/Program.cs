@@ -1,6 +1,9 @@
 using GeoComment.Data;
+using GeoComment.Options;
 using GeoComment.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,25 +13,48 @@ builder.Services.AddScoped<GeoService>();
 builder.Services.AddDbContext<GeoDbContext>(
     o => o.UseSqlServer(
         builder.Configuration.GetConnectionString("default")));
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(x =>
+{
+    x.OperationFilter<MySwaggerOperationsFilter>();
+});
+builder.Services.ConfigureOptions<ConfigureSwaggerOption>();
 builder.Services.AddApiVersioning(config =>
 {
-    config.AssumeDefaultVersionWhenUnspecified = true;
     config.DefaultApiVersion = new ApiVersion(0, 1);
+    config.AssumeDefaultVersionWhenUnspecified = true;
+    config.ReportApiVersions = true;
+    config.ApiVersionReader = new QueryStringApiVersionReader("api-version");
+});
+builder.Services.AddVersionedApiExplorer(o =>
+{
+    o.GroupNameFormat = "api-version";
+    o.SubstituteApiVersionInUrl = true;
 });
 
+
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(option =>
+    {
+        var provide = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        foreach (var description in provide.ApiVersionDescriptions)
+        {
+            option.SwaggerEndpoint(
+                $"/swagger/{description.GroupName}/swagger.json",
+                description.ApiVersion.ToString()
+            );
+        }
+    });
 }
-
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
