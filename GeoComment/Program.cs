@@ -5,6 +5,7 @@ using GeoComment.Options;
 using GeoComment.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -13,7 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<GeoService>();
 
@@ -36,7 +36,7 @@ builder.Services.AddApiVersioning(option =>
 
 builder.Services.AddVersionedApiExplorer(options =>
 {
-    options.GroupNameFormat = "'v'VV";
+    options.GroupNameFormat = "api-version";
     options.SubstituteApiVersionInUrl = true;
 });
 
@@ -50,22 +50,10 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Description = "Basic Authorization header using the Basic scheme."
     });
-
-    options.SwaggerDoc("v0.1", new OpenApiInfo
-    {
-        Title = "GeoComment v0.1",
-        Version = "v0.1"
-    });
-
-    options.SwaggerDoc("v0.2", new OpenApiInfo
-    {
-        Title = "GeoComment v0.2",
-        Version = "v0.2"
-    });
-
     options.OperationFilter<MySwaggerOperationsFilter>();
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
+builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 var app = builder.Build();
 
@@ -74,8 +62,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(o =>
     {
-        o.SwaggerEndpoint($"/swagger/v0.1/swagger.json", "v0.1");
-        o.SwaggerEndpoint($"/swagger/v0.2/swagger.json", "v0.2");
+        var provide = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        foreach (var description in provide.ApiVersionDescriptions)
+        {
+            o.SwaggerEndpoint(
+                $"/swagger/{description.GroupName}/swagger.json",
+                description.ApiVersion.ToString()
+            );
+        }
     });
 }
 

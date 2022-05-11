@@ -2,6 +2,7 @@
 using GeoComment.DTO.v2;
 using GeoComment.Models;
 using GeoComment.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -94,11 +95,10 @@ namespace GeoComment.Controllers
         }
         [HttpPost]
         [ApiVersion("0.2")]
+        [Authorize]
         public async Task<ActionResult<ResultDtoV2>> SaveComment(InputDtoV2 model)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized();
             var comment = new MyGeoComment
             {
                 Author = user.UserName,
@@ -121,10 +121,6 @@ namespace GeoComment.Controllers
                     title = result.Title
                 }
             };
-            if (newcomment.id == null || newcomment.id >= 999 || newcomment.body.author == null)
-            {
-                return NotFound();
-            }
             return Created("", newcomment);
         }
         [HttpGet]
@@ -164,23 +160,18 @@ namespace GeoComment.Controllers
             if (!ModelState.IsValid)
                 return BadRequest();
             var result = await _geoService.RangeFilter(minLon, maxLon, minLat, maxLat);
-            var models = new List<ResultDtoV2>();
-            foreach (var item in result)
+            var models = result.Select(item => new ResultDtoV2()
             {
-                var model = new ResultDtoV2()
+                body = new ResultBody
                 {
-                    body = new ResultBody
-                    {
-                        author = item.Author,
-                        message = item.Message,
-                        title = item.Title
-                    },
-                    latitude = item.Latitude,
-                    longitude = item.Longitude,
-                    id = item.Id
-                };
-                models.Add(model);
-            }
+                    author = item.Author,
+                    message = item.Message,
+                    title = item.Title
+                },
+                latitude = item.Latitude,
+                longitude = item.Longitude,
+                id = item.Id
+            }).ToList();
             return Ok(models);
         }
 
