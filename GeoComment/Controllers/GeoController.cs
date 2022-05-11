@@ -28,40 +28,69 @@ namespace GeoComment.Controllers
             if (!ModelState.IsValid)
                 return BadRequest();
             var result = await _geoService.RangeFilter(minLon, maxLon, minLat, maxLat);
+            result.Select(x => new ResultDto
+            {
+                author = x.Author,
+                message = x.Message,
+                latitude = x.Latitude,
+                longitude = x.Longitude,
+                id = x.Id
+            });
             return Ok(result);
         }
         [HttpPost]
         [ApiVersion("0.1")]
-        public async Task<ActionResult> SaveMyComment(InputDto geoComment)
+        public async Task<ActionResult> SaveComment(InputDto geoComment)
         {
-            var result = await _geoService.Add(geoComment);
+            var geo = new MyGeoComment
+            {
+                Author = geoComment.author,
+                Message = geoComment.message,
+                Latitude = geoComment.latitude,
+                Longitude = geoComment.longitude
+            };
+            var result = await _geoService.Add(geo);
             return Created("", result);
         }
         [HttpGet]
         [Route("{id}")]
         [ApiVersion("0.1")]
-        public async Task<ActionResult> GetID(int id)
+        public async Task<ActionResult<ResultDto>> GetId(int id)
         {
-            var response = await _geoService.GetId(id);
-            if (response == null)
-                return NotFound("This value not in the db");
-            return Ok(response);
+            var result = await _geoService.GetId(id);
+            if (result == null)
+                return NotFound();
+            var myNewDto = new ResultDto()
+            {
+                id = result.Id,
+                author = result.Author,
+                message = result.Message,
+                longitude = result.Longitude,
+                latitude = result.Latitude
+            };
+            return Ok(myNewDto);
         }
-
         [ApiVersion("0.2")]
         [HttpGet]
         [Route("{id:int}")]
-        public async Task<ActionResult> GetByID(int id)
+        public async Task<ActionResult<ResultDtoV2>> GetIdv2(int id)
         {
-            //var user = await _userManager.GetUserAsync(principal);
-            //if (user == null)
-            //{
-            //    return NotFound();
-            //}
-            var respons = await _geoService.GetIdv2(id);
-            if (respons == null)
-                return NotFound("This value not in the db");
-            return Ok(respons);
+            var result = await _geoService.GetId(id);
+            if (result == null)
+                return NotFound();
+            var myNewDto = new ResultDtoV2
+            {
+                body = new ResultBody
+                {
+                    author = result.Author,
+                    message = result.Message,
+                    title = result.Title
+                },
+                id = result.Id,
+                longitude = result.Longitude,
+                latitude = result.Latitude
+            };
+            return Ok(myNewDto);
         }
         [HttpPost]
         [ApiVersion("0.2")]
@@ -69,19 +98,7 @@ namespace GeoComment.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
-            {
                 return Unauthorized();
-            }
-
-            if (user.UserName == null)
-            {
-                return NotFound();
-            }
-            // model.body.author = user.UserName;
-            //if (model.body.title == null)
-            //{
-            //    model.body.title = _geoService.GetTitle(model.body.message);
-            //}
             var comment = new MyGeoComment
             {
                 Author = user.UserName,
@@ -91,8 +108,7 @@ namespace GeoComment.Controllers
                 Title = model.body.title,
                 User = user
             };
-            var result = await _geoService.Addv2(comment);
-            // model.id = result.Entity.id;
+            var result = await _geoService.Add(comment);
             var newcomment = new ResultDtoV2()
             {
                 id = result.Id,
@@ -105,69 +121,67 @@ namespace GeoComment.Controllers
                     title = result.Title
                 }
             };
-            if (newcomment.id == null || newcomment.id > 888 || newcomment.body.author == null)
+            if (newcomment.id == null || newcomment.id >= 999 || newcomment.body.author == null)
             {
                 return NotFound();
             }
             return Created("", newcomment);
-            //return CreatedAtAction("", new { id = newcomment.id }, newcomment);
         }
-
         [HttpGet]
         [Route("{username}")]
         [ApiVersion("0.2")]
         public async Task<ActionResult<List<ResultDtoV2>>> GetByUserName(string username)
         {
-            // var user = await _userManager.GetUserAsync(User);
-            //if (user.UserName == username)
-            //{
-            //    return NotFound();
-            //}
-
             var result = await _geoService.FindByName(username);
             if (result.Length <= 0)
                 return NotFound();
-            //var a = result.ToList();
-
-            //if (result == null)
-            //   return NotFound();
-            //foreach (var item in result.ToList())
-            //{
-            //    if (item.Author == null || item.Author != username)
-            //    {
-            //        return NotFound();
-            //    }
-            //}
             var model = new List<ResultDtoV2>();
-            foreach (var myGeoComment in result)
+            foreach (var item in result)
             {
-
-                var item = new ResultDtoV2()
+                var geo = new ResultDtoV2()
                 {
+                    id = item.Id,
+                    latitude = item.Latitude,
+                    longitude = item.Longitude,
                     body = new ResultBody
                     {
-                        author = myGeoComment.Author,
-                        title = myGeoComment.Title,
-                        message = myGeoComment.Message
-                    },
-                    latitude = myGeoComment.Latitude,
-                    longitude = myGeoComment.Longitude
+                        author = item.Author,
+                        title = item.Title,
+                        message = item.Message
+                    }
                 };
-                model.Add(item);
+                model.Add(geo);
             }
-
             return Ok(model);
         }
         [HttpGet]
         [ApiVersion("0.2")]
+        [Produces("application/json")]
         public async Task<ActionResult<List<ResultDtoV2>>> CommentsFilterv2(double? minLon, double? maxLon, double? minLat, double? maxLat)
         {
             if (minLon == null || maxLon == null || minLat == null || maxLat == null)
                 return StatusCode(400);
             if (!ModelState.IsValid)
                 return BadRequest();
-            var result = await _geoService.RangeFilterv2(minLon, maxLon, minLat, maxLat);
-            return Ok(result);
+            var result = await _geoService.RangeFilter(minLon, maxLon, minLat, maxLat);
+            var models = new List<ResultDtoV2>();
+            foreach (var item in result)
+            {
+                var model = new ResultDtoV2()
+                {
+                    body = new ResultBody
+                    {
+                        author = item.Author,
+                        message = item.Message,
+                        title = item.Title
+                    },
+                    latitude = item.Latitude,
+                    longitude = item.Longitude,
+                    id = item.Id
+                };
+                models.Add(model);
+            }
+            return Ok(models);
         }
 
     }
