@@ -1,6 +1,6 @@
-﻿namespace GeoComment.Models
+﻿namespace GeoComment.DTO.v1
 {
-    public class MyDTO
+    public class ResultDto
     {
         public int id { get; set; }
         public string author { get; set; }

@@ -1,36 +1,48 @@
+using GeoComment.AuthHandlers;
 using GeoComment.Data;
 using GeoComment.Models;
 using GeoComment.Options;
 using GeoComment.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 builder.Services.AddScoped<GeoService>();
-// Add services to the container.
-builder.Services.AddDbContext<GeoDbContext>(
-    o => o.UseSqlServer(
-        builder.Configuration.GetConnectionString("default")));
+
 builder.Services.AddIdentityCore<User>()
     .AddEntityFrameworkStores<GeoDbContext>();
 
-//Options for Basic Auth 
-//***Start***
-builder.Services.AddAuthentication();
-//***End***
+builder.Services.AddDbContext<GeoDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("default")));
 
-//Services for Version control
-// ***Start***
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(x =>
+builder.Services.AddAuthentication("BasicAuthentication")
+    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+
+builder.Services.AddApiVersioning(option =>
 {
-    //Options for Basic Auth 
-    //***Start***
-    x.AddSecurityDefinition("BasicAuth", new OpenApiSecurityScheme
+    option.DefaultApiVersion = new ApiVersion(0, 1);
+    option.AssumeDefaultVersionWhenUnspecified = true;
+    option.ApiVersionReader =
+        new QueryStringApiVersionReader("api-version");
+});
+
+builder.Services.AddVersionedApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("BasicAuth", new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
@@ -38,47 +50,35 @@ builder.Services.AddSwaggerGen(x =>
         In = ParameterLocation.Header,
         Description = "Basic Authorization header using the Basic scheme."
     });
-    x.OperationFilter<SecurityRequirementsOperationFilter>();
-    //***End***
-    x.OperationFilter<MySwaggerOperationsFilter>();
+
+    options.SwaggerDoc("v0.1", new OpenApiInfo
+    {
+        Title = "GeoComment v0.1",
+        Version = "v0.1"
+    });
+
+    options.SwaggerDoc("v0.2", new OpenApiInfo
+    {
+        Title = "GeoComment v0.2",
+        Version = "v0.2"
+    });
+
+    options.OperationFilter<MySwaggerOperationsFilter>();
+    options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
-builder.Services.ConfigureOptions<ConfigureSwaggerOption>();
-builder.Services.AddApiVersioning(config =>
-{
-    config.DefaultApiVersion = new ApiVersion(0, 1);
-    config.AssumeDefaultVersionWhenUnspecified = true;
-    config.ReportApiVersions = true;
-    config.ApiVersionReader = new QueryStringApiVersionReader("api-version");
-});
-builder.Services.AddVersionedApiExplorer(o =>
-{
-    o.GroupNameFormat = "api-version";
-    o.SubstituteApiVersionInUrl = true;
-});
-// ***End***
 
 var app = builder.Build();
 
-
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(option =>
+    app.UseSwaggerUI(o =>
     {
-        var provide = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        foreach (var description in provide.ApiVersionDescriptions)
-        {
-            option.SwaggerEndpoint(
-                $"/swagger/{description.GroupName}/swagger.json",
-                description.ApiVersion.ToString()
-            );
-        }
-
+        o.SwaggerEndpoint($"/swagger/v0.1/swagger.json", "v0.1");
+        o.SwaggerEndpoint($"/swagger/v0.2/swagger.json", "v0.2");
     });
 }
-app.UseDefaultFiles();
-app.UseStaticFiles();
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
@@ -88,10 +88,10 @@ app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
-    var ctx = scope.ServiceProvider
-        .GetRequiredService<GeoDbContext>();
+    var database = scope.ServiceProvider
+        .GetRequiredService<GeoService>();
 
-    ctx.Database.EnsureCreated();
+    await database.ResetDb();
 }
 
 app.Run();
