@@ -6,7 +6,7 @@ Made 2 different version and dto's to control versions.
 
 Also swagger can read automaticly versions and add current tested version on field directly.
 
-Using BasicAuth for now but can improve with JWTAuth
+Using BasicAuth and Bearer for now but can improve with JWTAuth
 
 Screenshoots of swagger
 
